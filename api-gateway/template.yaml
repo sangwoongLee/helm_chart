@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: apigw
+  app: apigw
+objects:
+- apiVersion: v1
+  data:
+    .dockercfg: eyJyZWdpc3RyeS5jcmlvLnJvY2tzIjp7InVzZXJuYW1lIjoiY25wIiwicGFzc3dvcmQiOiIxMjM0IiwiZW1haWwiOiJub25lIiwiYXV0aCI6IlkyNXdPakV5TXpRPSJ9fQ==
+  kind: Secret
+  metadata:
+    name: registry
+  type: kubernetes.io/dockercfg
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    generation: 1gksksla1004!
+    
+    labels:
+      app: apigw-admin
+      service: apigw-admin
+    name: apigw-admin
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+  spec:
+    replicas: 1
+    selector:
+      app: apigw-admin
+      service: apigw-admin
+    template:
+      metadata:
+        labels:
+          app: apigw-admin
+          service: apigw-admin
+      spec:
+        containers:
+        - image: registry.sr-cloud.com:15000/apigw/admin:latest
+          imagePullPolicy: Always
+          resources:
+             requests:
+               memory: "1Gi"
+               cpu: "1"
+             limits:
+               memory: "1Gi"
+               cpu: "1"
+          name: apigw-admin
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          - containerPort: 1443
+            protocol: TCP
+        imagePullSecrets:
+        - name: registry
+        restartPolicy: Always
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: apigw-admin
+      service: apigw-admin
+    name: apigw-admin
+  spec:
+    ports:
+    - name: http
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+    - name: https
+      port: 1443
+      protocol: TCP
+      targetPort: 1443
+    selector:
+      app: apigw-admin
+      service: apigw-admin
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    generation: 1
+    labels:
+      app: api-gateway
+      service: api-gateway
+    name: api-gateway
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+  spec:
+    replicas: 1
+    selector:
+      app: api-gateway
+      service: api-gateway
+    template:
+      metadata:
+        labels:
+          app: api-gateway
+          service: api-gateway
+      spec:
+        containers:
+        - image: registry.sr-cloud.com:15000/apigw/gateway2:latest
+          imagePullPolicy: Always
+          resources:
+             requests:
+               memory: "2Gi"
+               cpu: "2"
+             limits:
+               memory: "2Gi"
+               cpu: "2"
+          name: api-gateway
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+        imagePullSecrets:
+        - name: registry
+        restartPolicy: Always
+        volumes:
+        - name: kompaas-custom-metric
+          configMap:
+            name: kompaas-openshift-agent-apigw
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: kompaas-openshift-agent-apigw
+    labels:
+      name: kompaas-openshift-agent-apigw
+  data:
+    kompaas-custom-metric: |
+      endpoints:
+      - type: prometheus
+        protocol: "http"
+        port: 8081
+        path: /metrics
+        collection_interval: 10s
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: api-gateway
+      service: api-gateway
+    name: api-gateway
+  spec:
+    ports:
+    - name: web
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: api-gateway
+      service: api-gateway
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: api-gateway
+      service: api-gateway
+    name: api-gateway
+  spec:
+    port:
+      targetPort: web
+    to:
+      kind: Service
+      name: api-gateway
+      weight: 100
+    wildcardPolicy: None

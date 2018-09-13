@@ -1,0 +1,40 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  generation: 1
+  labels:
+    app: api-gateway
+    service: api-gateway
+  name: api-gateway
+  annotations:
+    template.alpha.openshift.io/wait-for-ready: "true"
+spec:
+  replicas: 1
+  selector:
+    app: api-gateway
+    service: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        service: api-gateway
+    spec:
+      containers:
+      - image: gateway:latest
+        imagePullPolicy: Always
+        resources:
+            requests:
+              memory: "2Gi"
+              cpu: "2"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+        name: api-gateway
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+      restartPolicy: Always
+      volumes:
+      - name: kompaas-custom-metric
+        configMap:
+          name: kompaas-openshift-agent-apigw

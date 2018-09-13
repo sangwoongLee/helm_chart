@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  kompaas-custom-metric: |
+    endpoints:
+    - type: prometheus
+      protocol: "http"
+      port: 8081
+      path: /metrics
+      collection_interval: 10s
+kind: ConfigMap
+metadata:
+  labels:
+    name: kompaas-openshift-agent-apigw
+  name: kompaas-openshift-agent-apigw
